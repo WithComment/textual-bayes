@@ -1,0 +1,15 @@
+method: "bayes-over-output"
+prompt_template: "You will be given an answer. Please generate a multiple-choice question that can be correctly answered by the given answer.
+    Answer: {answer}
+    Question: {question}"
+logprob_extract_method: "concat"
+output_path: "logs/"
+
+#llm related configurations
+llm: "microsoft/Phi-3.5-mini-instruct"
+temperature: 0.8
+seed: 42
+max_model_len: 8192
+dtype: "auto"
+gpu_memory_utilization: 0.7
+tensor_parallel_size: 1

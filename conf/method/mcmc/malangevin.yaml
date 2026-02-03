@@ -1,0 +1,10 @@
+# Metropolis-adjusted Langevin partial that, once instantiated, takes in a proposal
+_partial_: true
+_target_: method.mcmc.methods.MetropolisHastings
+likelihood_answer_regex: ${data.likelihood_answer_regex}
+likelihood_param_addendum: ${data.likelihood_param_addendum}
+likelihood_beta: 100
+prior_meta_prompts: ${data.prior_meta_prompts}
+engine:
+  _target_: method.tgext.together.ChatTogetherLogProb
+  model_string: nvidia/Llama-3.1-Nemotron-70B-Instruct-HF
