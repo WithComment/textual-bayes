@@ -1,9 +1,12 @@
 method: baseline
 n: 10 # Perturbation per question
 
+# Default vLLM model for all generation purposes
+vllm_model: Qwen/Qwen3-4B
+
 engine:
-  _target_: method.baseline.engine.OpenAIEngine
-  model_name: gpt-4o-mini
+  _target_: method.baseline.engine.VLLMEngine
+  model_name: ${method.vllm_model}
 
 perturber_select: paraphrasing # Select ONE perturber below
 perturbers:
@@ -50,27 +53,27 @@ aggregators:
     # engine passed by runner
   SemanticFrequencyUQ:
     _target_: method.baseline.aggregate.SemanticFrequencyUQ
-    llm_engine: gpt-4o
+    llm_engine: vllm-${method.vllm_model}
   LaplacianEigenvalueUQ:
     _target_: method.baseline.aggregate.LaplacianEigenvalueUQ
     entailment_model: "deberta"
     strict_entailment: false
-    llm_engine: gpt-4o-mini
+    llm_engine: vllm-${method.vllm_model}
   LaplacianDegreeUQ:
     _target_: method.baseline.aggregate.LaplacianDegreeUQ
     entailment_model: "deberta"
     strict_entailment: false
-    llm_engine: gpt-4o-mini
+    llm_engine: vllm-${method.vllm_model}
   SemanticVNEUq:
     _target_: method.baseline.aggregate.SemanticVNEUq
     entailment_model: "deberta"
     strict_entailment: false
-    llm_engine: gpt-4o-mini
+    llm_engine: vllm-${method.vllm_model}
   SemanticEntropyUQ:
     _target_: method.baseline.aggregate.SemanticEntropyUQ
     entailment_model: "deberta"
     strict_entailment: false
-    llm_engine: gpt-4o-mini
+    llm_engine: vllm-${method.vllm_model}
     # use_logprobs is not in init and not set in here
 
 eval_kwargs:

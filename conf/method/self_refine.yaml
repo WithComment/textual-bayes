@@ -3,11 +3,13 @@ method: bayes-over-prompt
 defaults:
 - mcmc: malangevin
 
-# Engines for the dataset
-closed_engine: gpt-4o-mini
-open_engine:
-  _target_: method.tgext.together.ChatTogetherLogProb
-  model_string: nvidia/Llama-3.1-Nemotron-70B-Instruct-HF
+# Default vLLM model for all generation purposes
+vllm_model: Qwen/Qwen3-4B
+
+# Engines for the dataset - now using vLLM
+vllm_engine:
+  _target_: method.tgext.vllm_engine.get_vllm_engine
+  model_string: ${method.vllm_model}
 
 # MCMC parameters
 steps: 50
@@ -20,7 +22,7 @@ num_repeats: 1  # Number of times to repeat each sampled model
 model:
   _partial_: true
   _target_: method.models.SelfRefineModel
-  engine: ${method.closed_engine}
+  engine: ${method.vllm_engine}
   num_refine_steps: 1
 
 # An Optimizer partial that, once instantiated, takes in model parameters
@@ -32,7 +34,7 @@ optimizer:
     - The system prompt must be generic and applicable to any question.
     - The system prompt must not include formatting instructions for the last line of the response since they will be provided separately.
   verbose: false
-  engine: ${method.open_engine}
+  engine: ${method.vllm_engine}
 
 # A Proposal partial that, once instantiated, takes in a model and an optimizer
 proposal:
@@ -43,7 +45,7 @@ proposal:
     evaluation_instruction: ${data.likelihood_loss_text}
     role_description: ${data.likelihood_loss_role},
     input_roles: ${data.likelihood_loss_input_roles}
-    engine: ${method.closed_engine}
+    engine: ${method.vllm_engine}
 
 chain_kwargs:
   # Args to be passed into the model during MCMC sampling

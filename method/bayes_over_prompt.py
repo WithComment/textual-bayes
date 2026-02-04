@@ -10,6 +10,7 @@ from utils.checkpointing import load_from_disk, save_to_disk
 
 from .models import EnsembleModel, ParamData
 from .tgext.utils import standardize_engine
+from .tgext.vllm_engine import get_vllm_engine, DEFAULT_MODEL as DEFAULT_VLLM_MODEL
 
 logger = logging.getLogger("BOP")
 
@@ -38,10 +39,12 @@ def bop_mc(chain_dataloader, eval_dataloader, cfg):
         if method_cfg.num_chains <= 1:
             chains_init_params_data = [init_params_data]
         else:
+            # Use vLLM engine for rewordings (shared instance)
+            reword_engine = get_vllm_engine(method_cfg.get("vllm_model", DEFAULT_VLLM_MODEL))
             chains_init_params_data = [init_params_data] + reword_params(
                 init_params_data,
                 method_cfg.num_chains - 1,
-                standardize_engine("gpt-4o-mini"),
+                reword_engine,
             )
 
         # We will populate this list with MCMC chain samples
@@ -95,8 +98,11 @@ def bop_mc(chain_dataloader, eval_dataloader, cfg):
     save_to_disk(ensemble, output_path)
 
     logger.info("Final system prompts")
-    for model in ensemble.models:
-        logger.info(model.system_prompt.value)
+    final_prompts_path = output_dir / "final_prompts.txt"
+    with open(final_prompts_path, "w", encoding="utf-8") as f:
+        for model in ensemble.models:
+            value = model.get_system_prompt()
+            f.write(str(value).replace("\n", " ").strip() + "\n")
 
     # Evaluate the ensemble
     evaluator = instantiate(data_cfg.evaluator)(

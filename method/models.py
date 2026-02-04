@@ -23,6 +23,21 @@ class ParamData:
     input_roles: list[str] | None = None
 
 
+def _safe_deepcopy_engine(engine):
+    """
+    Safely deepcopy an engine, handling vLLM engines that can't be deepcopied.
+    
+    vLLM engines contain CUDA objects that can't be serialized. Since we use
+    a singleton pattern for vLLM engines, we just return the same instance.
+    """
+    try:
+        return deepcopy(engine)
+    except (TypeError, RuntimeError):
+        # Engine can't be deepcopied (e.g., vLLM with CUDA objects)
+        # This is expected for singleton engines
+        return engine
+
+
 class BaseModel(Module):
     def __init__(
         self,
@@ -32,8 +47,8 @@ class BaseModel(Module):
     ) -> None:
         self._params_data = params_data
         # We may be zeroing the engine cache, so we deepcopy the engine
-        # to avoid unexpected side effects
-        engine = deepcopy(engine)
+        # to avoid unexpected side effects (but vLLM engines can't be deepcopied)
+        engine = _safe_deepcopy_engine(engine)
         self.engine = standardize_engine(engine)
         self.use_engine_cache = use_engine_cache
 
