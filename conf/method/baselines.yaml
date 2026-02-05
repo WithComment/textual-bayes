@@ -8,7 +8,7 @@ engine:
   _target_: method.baseline.engine.VLLMEngine
   model_name: ${method.vllm_model}
 
-perturber_select: paraphrasing # Select ONE perturber below
+perturber_select: system_paraphrasing # Select ONE perturber below
 perturbers:
   simple_sample:
     _target_: method.baseline.perturb.SimpleSample
@@ -18,6 +18,9 @@ perturbers:
     t_max: 1.0
   paraphrasing:
     _target_: method.baseline.perturb.ParaphrasingPerturber
+    ans_temp: 1.0
+  system_paraphrasing:
+    _target_: method.baseline.perturb.SystemParaphrasingPerturber
     ans_temp: 1.0
   sys_msg:
     _target_: method.baseline.perturb.SysMsgPerturber

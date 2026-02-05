@@ -134,7 +134,7 @@ class VLLMEngine(Engine):
             )
         
         n = kwargs.pop("n", 1)
-        temperature = kwargs.pop("temperature", 0)
+        temperature = kwargs.pop("temperature", 1)
         max_tokens = kwargs.pop("max_tokens", 2000)
         top_p = kwargs.pop("top_p", 1.0)
         

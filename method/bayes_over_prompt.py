@@ -52,7 +52,7 @@ def bop_mc(chain_dataloader, eval_dataloader, cfg):
         chains_samples_params_data: list[list[list[ParamData]]] = []
 
         # Each iteration of this loop represents a single MCMC chain
-        for params_data in chains_init_params_data:
+        for chain_idx, params_data in enumerate(chains_init_params_data):
             # Create the model, optimizer, proposal distribution, and mcmc method from the config
             model = instantiate(method_cfg.model)(params_data)
             model_params = model.parameters()
@@ -67,13 +67,14 @@ def bop_mc(chain_dataloader, eval_dataloader, cfg):
                 prior_losses_text=data_cfg.get("prior_losses_text", None),
             )
             mcmc = instantiate(method_cfg.mcmc)(proposal=proposal)
-
+            chain_save_path = output_dir / f"chain_{chain_idx}_history.jsonl"
             # Obtain samples of params from this single chain
             samples_params = mcmc.sample_from_chain(
                 chain_dataloader,
                 steps,
                 burn_in,
                 thinning,
+                save_path=chain_save_path,
                 transform=lambda x: transform(x[0]),
                 **method_cfg.chain_kwargs,
             )
@@ -87,9 +88,10 @@ def bop_mc(chain_dataloader, eval_dataloader, cfg):
         # Ensemble the samples
         ensemble = []
         for samples_params_data in chains_samples_params_data:
-            for params_data in samples_params_data:
+            for sample_params_data in samples_params_data:
                 for _ in range(num_repeats):
-                    ensemble.append(instantiate(method_cfg.model)(params_data))
+                    model = instantiate(method_cfg.model)(sample_params_data)
+                    ensemble.append(model)
         ensemble = EnsembleModel(models=ensemble)
 
     # Save the ensemble
@@ -98,11 +100,12 @@ def bop_mc(chain_dataloader, eval_dataloader, cfg):
     save_to_disk(ensemble, output_path)
 
     logger.info("Final system prompts")
-    final_prompts_path = output_dir / "final_prompts.txt"
-    with open(final_prompts_path, "w", encoding="utf-8") as f:
-        for model in ensemble.models:
-            value = model.get_system_prompt()
-            f.write(str(value).replace("\n", " ").strip() + "\n")
+    final_prompts = [m.system_prompt.value for m in ensemble.models]
+    with open(output_dir / "final_system_prompts.txt", "w") as f:
+        for prompt in final_prompts:
+            f.write(prompt + "\n\n")
+    for model in ensemble.models:
+        logger.info(model.system_prompt.value)
 
     # Evaluate the ensemble
     evaluator = instantiate(data_cfg.evaluator)(

@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from abc import ABC, abstractmethod
@@ -48,7 +49,7 @@ class MCMCMethod(ABC):
         pass
 
     def sample_from_chain(
-        self, dataloader, steps, burn_in, thinning, transform, **model_kwargs
+        self, dataloader, steps, burn_in, thinning, transform, save_path=None, **model_kwargs
     ) -> list[list[Variable]]:
         # Initialize the chain with the current parameters
         samples_params = [self.parameters]
@@ -63,11 +64,18 @@ class MCMCMethod(ABC):
                 continue
 
             x, y = transform(example)
-            self.logger.info(f"x: {x.value}")
+            # self.logger.info(f"x: {x.value}")
             self.logger.info(f"y: {y.value}")
             self.step(x, y, **model_kwargs)
 
             cur_params = self.parameters
+            if save_path:
+                with open(save_path, "a") as f:
+                    record = {
+                        "step": step,
+                        "prompts": [p.value for p in cur_params]
+                    }
+                    f.write(json.dumps(record) + "\n")
             self.logger.info(f"Current parameters: {[p.value for p in cur_params]}")
             cur_accept_rate = sum([h["accept"] for h in self.history]) / len(self.history)
             self.logger.info(f"Current acceptance rate: {cur_accept_rate}")
