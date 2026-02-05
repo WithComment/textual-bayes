@@ -1,6 +1,5 @@
 import logging
 from collections import deque
-from copy import deepcopy
 
 from textgrad import logger
 from textgrad.optimizer.optimizer import TextualGradientDescent
@@ -8,34 +7,6 @@ from textgrad.variable import Variable
 
 
 class TextualGradientDescentLogProb(TextualGradientDescent):
-    def __deepcopy__(self, memo):
-        """
-        Custom deepcopy that handles engines that can't be deepcopied (e.g., vLLM).
-        
-        The engine is excluded from deepcopy and the same instance is reused.
-        """
-        # Save the engine reference
-        engine = self.engine
-        
-        # Temporarily remove engine from self to allow deepcopy of other attributes
-        self.engine = None
-        
-        try:
-            # Deepcopy everything except the engine
-            new_obj = object.__new__(self.__class__)
-            memo[id(self)] = new_obj
-            
-            for k, v in self.__dict__.items():
-                if k == 'engine':
-                    setattr(new_obj, k, engine)  # Reuse the same engine
-                else:
-                    setattr(new_obj, k, deepcopy(v, memo))
-        finally:
-            # Restore the engine reference
-            self.engine = engine
-        
-        return new_obj
-
     def logprobs(self, parameters_new: list[Variable]):
         parameters_new_logprobs = []
         for parameter, parameter_new in zip(self.parameters, parameters_new):

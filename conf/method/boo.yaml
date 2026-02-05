@@ -5,11 +5,8 @@ prompt_template: "You will be given an answer. Please generate a multiple-choice
 logprob_extract_method: "concat"
 output_path: "logs/"
 
-# Default vLLM model for all generation purposes
-vllm_model: Qwen/Qwen3-4B
-
 #llm related configurations
-llm: ${method.vllm_model}
+llm: "microsoft/Phi-3.5-mini-instruct"
 temperature: 0.8
 seed: 42
 max_model_len: 8192

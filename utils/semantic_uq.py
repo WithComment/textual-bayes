@@ -1,41 +1,14 @@
 import logging
-from typing import List, Union
+from typing import List
 
 import numpy as np
 import scipy
 from scipy.special import logsumexp
 from textgrad import get_engine
-from textgrad.engine import EngineLM
 
 from utils.entailment_model import EntailmentDeberta
 
 logger = logging.getLogger("SemanticUQ")
-
-# Default vLLM model
-DEFAULT_VLLM_MODEL = "Qwen/Qwen3-4B"
-
-
-def get_llm_engine(llm_engine: Union[str, EngineLM] = None) -> EngineLM:
-    """
-    Get an LLM engine, supporting both string specifications and engine objects.
-    
-    Args:
-        llm_engine: Either a string (model name with optional prefix like 'vllm-') 
-                   or an EngineLM object. If None, uses the default vLLM model.
-                   
-    Returns:
-        An EngineLM instance
-    """
-    if llm_engine is None:
-        # Default to vLLM with Qwen3-4B
-        llm_engine = f"vllm-{DEFAULT_VLLM_MODEL}"
-    
-    if isinstance(llm_engine, str):
-        return get_engine(llm_engine)
-    elif isinstance(llm_engine, EngineLM):
-        return llm_engine
-    else:
-        raise ValueError(f"llm_engine must be a string or EngineLM, got {type(llm_engine)}")
 
 
 class SemanticClustering:
@@ -43,12 +16,12 @@ class SemanticClustering:
         self,
         entailment_model="deberta",
         strict_entailment=False,
-        llm_engine: Union[str, EngineLM] = None,
+        llm_engine="gpt-4o",
         cuda=False,
     ):
         self.entailment_model = None
         self.strict_entailment = strict_entailment
-        self.engine = get_llm_engine(llm_engine)
+        self.engine = get_engine(llm_engine)
 
     def check_equivalence_by_entailment(self, text1, text2):
         implication_1 = self.entailment_model.check_implication(text1, text2)
@@ -235,10 +208,7 @@ class SemanticClustering:
 
 class SemanticUQ:
     def __init__(
-        self, 
-        entailment_model="deberta", 
-        strict_entailment=False, 
-        llm_engine: Union[str, EngineLM] = None
+        self, entailment_model="deberta", strict_entailment=False, llm_engine="gpt-3.5-turbo"
     ):
         self.semantic_clustering = SemanticClustering(
             entailment_model, strict_entailment, llm_engine
