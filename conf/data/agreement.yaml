@@ -1,0 +1,57 @@
+dataset: agreement
+batch_size: 10
+chain_split: train
+eval_split: validation
+
+# Transform using the updated function
+transform:
+  _target_: utils.data_processor.prepare_agreement_example
+  _partial_: true
+
+# Regex to extract the answer for evaluation
+# Captures "agree" or "disagree" in Group 1
+answer_regex: Answer:\s*(agree|disagree)
+
+# The System Prompt to Optimize
+params_data:
+  - name: system_prompt
+    value: Carefully read the question and the previously given response. Determine if you disagree with the final answer. Provide reasoning as well as a final verdict.
+    role: system prompt for a disagreement detection model
+    addendum: >-
+      The last line of your response must always and only be of the following
+      format: "Answer: VERDICT" (without quotes) where VERDICT is agree or disagree.
+    addendum_role: formatting instructions for the last line of the response
+
+# Instructions for the TextGrad loss function (Proposal step)
+likelihood_loss_text: >-
+  You will be given a context containing a question and a response, and an attempted verdict by a language model.
+  Check if the attempted verdict matches the correct verdict provided.
+  Be critical. If the verdicts match, the attempt is correct.
+likelihood_loss_role: answer evaluation instructions
+likelihood_loss_input_roles: ["input context", "correct verdict", "attempted verdict"]
+
+# MCMC Likelihood parameters
+# Group 1 must be the prefix "Answer: " so the code can append the target "agree"
+likelihood_answer_regex: (Answer:\s*)(agree|disagree)
+likelihood_param_addendum: >-
+  The last line of your response must always and only be of the following
+  format: "Answer: VERDICT" (without quotes) where VERDICT is agree or disagree.
+
+prior_meta_prompts:
+  - >-
+    Generate a good system prompt for a disagreement detection model. 
+    The system prompt must be concise, generic, and ensure the model correctly identifies when to agree or disagree.
+
+# Evaluation settings
+evaluator:
+  _target_: evaluation.datasets.MultiChoiceEvaluator
+  _partial_: true
+  answer_regex: ${data.answer_regex}
+  # Choices must match the lowercase targets exactly
+  choices: ["agree", "disagree"]
+
+baseline_eval_fn:
+  _target_: method.baseline.evaluate.baseline_multi_choice
+  _partial_: true
+  answer_regex: ${data.answer_regex}
+  choices: ["agree", "disagree"]
