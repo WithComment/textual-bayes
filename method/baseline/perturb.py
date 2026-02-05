@@ -69,7 +69,7 @@ class SimpleSample(ResponsePerturber):
         results = []
         for i in range(n):
             response = responses[i]
-            logger.info(f"Response {i}: {response}")
+            # logger.info(f"Response {i}: {response}")
             logprobs = logprobs_list[i] if logprobs_list else None
             results.append(PerturbedData(response=response, logprobs=logprobs, messages=messages))
         return results
@@ -188,6 +188,87 @@ class ParaphrasingPerturber(ResponsePerturber):
                 results.append((i, perturbed))
         results = list(map(lambda x: x[1], sorted(results)))
 
+        return results
+
+
+class SystemParaphrasingPerturber(ResponsePerturber):
+    """Perturbs the system prompt by paraphrasing it before generation."""
+
+    def __init__(self, ans_temp: float) -> None:
+        self.ans_temp = ans_temp
+        self.cmd = (
+            "Suggest a way to paraphrase the text in triple quotes above.\n"
+            "Keep the original meaning and any formatting requirements (like [brackets]) intact.\n"
+            r"Answer should ONLY be the paraphrase and nothing else."
+        )
+        # Cache to avoid re-paraphrasing the same system prompt 100 times
+        self.cached_paraphrases = None
+        self.cached_original_prompt = None
+
+    def perturb_response(
+        self,
+        n: int,
+        engine: Engine,
+        messages: List[Dict[str, str]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> List[PerturbedData]:
+        # Assume message[0] is the system prompt
+        assert messages[0]["role"] == "system", "First message must be system prompt"
+        current_system_prompt = messages[0]["content"]
+
+        # 1. Generate Paraphrases (only if not cached)
+        if self.cached_paraphrases is None or self.cached_original_prompt != current_system_prompt:
+            logger.info("Generating system prompt paraphrases (uncached)...")
+            paraphrase_input = f'"""\n{current_system_prompt}\n"""\n{self.cmd}'
+            paraphrase_messages = [{"role": "user", "content": paraphrase_input}]
+
+            all_paraphrases, _ = engine.generate(
+                messages=paraphrase_messages,
+                n=n,
+                logprobs=False,
+                temperature=1.0, # High temp for diversity in paraphrasing
+                *args,
+                **kwargs,
+            )
+            self.cached_paraphrases = all_paraphrases
+            self.cached_original_prompt = current_system_prompt
+            
+            for i, p in enumerate(all_paraphrases):
+                logger.info(f"System Paraphrase {i}: {p}")
+
+        # 2. Generate Responses using the cached paraphrased system prompts
+        results = []
+
+        def inner(i):
+            # Create a copy of messages with the SWAPPED system prompt
+            perturbed_messages = deepcopy(messages)
+            perturbed_messages[0]["content"] = self.cached_paraphrases[i]
+            
+            generated_list, logprobs_list = engine.generate(
+                messages=perturbed_messages,
+                n=1,
+                logprobs=True,
+                temperature=self.ans_temp,
+                *args,
+                **kwargs,
+            )
+            response = generated_list[0]
+            logprobs = logprobs_list[0] if logprobs_list else None
+            return (
+                i,
+                self.cached_paraphrases[i],
+                PerturbedData(response=response, logprobs=logprobs, messages=perturbed_messages),
+            )
+
+        with ThreadPoolExecutor(max_workers=min(32, n)) as exe:
+            futures = [exe.submit(inner, i) for i in range(n)]
+            for fut in as_completed(futures):
+                i, sys_prompt, perturbed = fut.result()
+                # logger.info(f"Response {i} with system paraphrase: {perturbed.response}")
+                results.append((i, perturbed))
+        
+        results = list(map(lambda x: x[1], sorted(results)))
         return results
 
 

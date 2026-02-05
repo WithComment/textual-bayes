@@ -10,6 +10,7 @@ from utils.checkpointing import load_from_disk, save_to_disk
 
 from .models import EnsembleModel, ParamData
 from .tgext.utils import standardize_engine
+from .tgext.vllm_engine import get_vllm_engine, DEFAULT_MODEL as DEFAULT_VLLM_MODEL
 
 logger = logging.getLogger("BOP")
 
@@ -38,10 +39,12 @@ def bop_mc(chain_dataloader, eval_dataloader, cfg):
         if method_cfg.num_chains <= 1:
             chains_init_params_data = [init_params_data]
         else:
+            # Use vLLM engine for rewordings (shared instance)
+            reword_engine = get_vllm_engine(method_cfg.get("vllm_model", DEFAULT_VLLM_MODEL))
             chains_init_params_data = [init_params_data] + reword_params(
                 init_params_data,
                 method_cfg.num_chains - 1,
-                standardize_engine("gpt-4o-mini"),
+                reword_engine,
             )
 
         # We will populate this list with MCMC chain samples
@@ -49,7 +52,7 @@ def bop_mc(chain_dataloader, eval_dataloader, cfg):
         chains_samples_params_data: list[list[list[ParamData]]] = []
 
         # Each iteration of this loop represents a single MCMC chain
-        for params_data in chains_init_params_data:
+        for chain_idx, params_data in enumerate(chains_init_params_data):
             # Create the model, optimizer, proposal distribution, and mcmc method from the config
             model = instantiate(method_cfg.model)(params_data)
             model_params = model.parameters()
@@ -64,13 +67,14 @@ def bop_mc(chain_dataloader, eval_dataloader, cfg):
                 prior_losses_text=data_cfg.get("prior_losses_text", None),
             )
             mcmc = instantiate(method_cfg.mcmc)(proposal=proposal)
-
+            chain_save_path = output_dir / f"chain_{chain_idx}_history.jsonl"
             # Obtain samples of params from this single chain
             samples_params = mcmc.sample_from_chain(
                 chain_dataloader,
                 steps,
                 burn_in,
                 thinning,
+                save_path=chain_save_path,
                 transform=lambda x: transform(x[0]),
                 **method_cfg.chain_kwargs,
             )
@@ -84,9 +88,10 @@ def bop_mc(chain_dataloader, eval_dataloader, cfg):
         # Ensemble the samples
         ensemble = []
         for samples_params_data in chains_samples_params_data:
-            for params_data in samples_params_data:
+            for sample_params_data in samples_params_data:
                 for _ in range(num_repeats):
-                    ensemble.append(instantiate(method_cfg.model)(params_data))
+                    model = instantiate(method_cfg.model)(sample_params_data)
+                    ensemble.append(model)
         ensemble = EnsembleModel(models=ensemble)
 
     # Save the ensemble
@@ -95,6 +100,10 @@ def bop_mc(chain_dataloader, eval_dataloader, cfg):
     save_to_disk(ensemble, output_path)
 
     logger.info("Final system prompts")
+    final_prompts = [m.system_prompt.value for m in ensemble.models]
+    with open(output_dir / "final_system_prompts.txt", "w") as f:
+        for prompt in final_prompts:
+            f.write(prompt + "\n\n")
     for model in ensemble.models:
         logger.info(model.system_prompt.value)
 

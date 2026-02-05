@@ -461,7 +461,15 @@ def is_integer(s):
     except ValueError:
         return False
 
+class AgreementDataset(QaDataset):
+    def __init__(self, split):
+        raw_data = hf_datasets.load_dataset("withcomment/disagree_textual_bayes", 'csqa')
+        self.data = raw_data[split]
 
+    def __getitem__(self, idx):
+        return self.data[idx]
+
+# Update the dataset_classes dictionary at the end of the file
 dataset_classes = {
     "arc": ArcDataset,
     "boolq": BoolqDataset,
@@ -478,4 +486,5 @@ dataset_classes = {
     "mmlu-pro": MmluProDataset,
     "gpqa": GpqaDataset,
     "simpleqa": SimpleqaDataset,
+    "agreement": AgreementDataset,
 }

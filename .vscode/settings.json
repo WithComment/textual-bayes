@@ -1,0 +1,12 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "/^cd /h/299/xiaowen/projects/textual-bayes && python main\\.py \\\\\n    \\+data=aime \\\\\n    \\+method=bop \\\\\n    method\\.mcmc\\.likelihood_beta=10 \\\\\n    method\\.steps=60 \\\\\n    method\\.burn_in=6 \\\\\n    method\\.thinning=6 \\\\\n    method\\.num_repeats=10 2>&1 \\| head -200$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^cd /h/299/xiaowen/projects/textual-bayes && source /h/299/xiaowen/venv/mad/bin/activate && python main\\.py \\\\\n    \\+data=aime \\\\\n    \\+method=bop \\\\\n    method\\.mcmc\\.likelihood_beta=10 \\\\\n    method\\.steps=60 \\\\\n    method\\.burn_in=6 \\\\\n    method\\.thinning=6 \\\\\n    method\\.num_repeats=10 2>&1 \\| head -300$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
+}

@@ -83,7 +83,7 @@ class MultiChoiceEvaluator(BaseEvaluator):
         elif y_probs.sum() < 1.0:
             y_probs /= y_probs.sum()
 
-        logger.info(f"Validation Example: {x}\nPrediction: {y_probs}\nAnswer: {y_true}")
+        logger.info(f"Prediction: {y_probs}\nAnswer: {y_true}")
 
         return {
             "y_true": self.choices.index(y_true.value),
@@ -120,7 +120,7 @@ class IntegerMathEvaluator(BaseEvaluator):
         answers_len = len(answers_parsed)
         ys = {answer: count / answers_len for answer, count in counter.items()}
 
-        logger.info(f"Validation Example: {x}\nPrediction: {ys}\nAnswer: {y_true}")
+        logger.info(f"Prediction: {ys}\nAnswer: {y_true}")
 
         return {
             "y_true": int(y_true.value),
@@ -167,7 +167,7 @@ class QasperEvaluator(BaseEvaluator):
         y_conf = max(ys.values())
         abst_true = int(example["unanswerable"])
         correctness = self.sc.get_correctness_by_llm(y_true, y_pred, example["question"])
-        logger.info(f"Validation Example: {x}\nPrediction: {ys}\nAnswer: {y_true}")
+        logger.info(f"Prediction: {ys}\nAnswer: {y_true}")
         logger.info(f"Answers from model\n" + "\n".join(answers_parsed))
         logger.info(f"Clustering results: {semantic_ids}")
         logger.info(f"Correctness: {correctness}")
@@ -233,7 +233,7 @@ class SimpleqaEvaluator(BaseEvaluator):
         y_pred = answers_parsed[semantic_ids.index(majority_cluster)]
         y_conf = max(ys.values())
         equivalence = self.sc.get_correctness_by_llm(y_true, y_pred, example["question"])
-        logger.info(f"Validation Example: {x}\nPrediction: {ys}\nAnswer: {y_true}")
+        logger.info(f"Prediction: {ys}\nAnswer: {y_true}")
         logger.info(f"Answers from model\n" + "\n".join(answers_parsed))
         logger.info(f"Clustering results: {semantic_ids}")
 

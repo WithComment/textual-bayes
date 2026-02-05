@@ -21,7 +21,17 @@ cd ..
 ```
 
 ## Run
-Before you start running `bop`, make sure you have OpenAI and Together AI keys. Then set the following environment variables.
+
+### Default Configuration (vLLM with Qwen3-4B)
+By default, the system uses **vLLM with Qwen/Qwen3-4B** for all LLM generation tasks. This runs locally and does not require any API keys.
+
+To use a different model, you can override the `vllm_model` parameter:
+```
+python main.py +data=aime +method=bop method.vllm_model=meta-llama/Meta-Llama-3-8B-Instruct
+```
+
+### Using External APIs (OpenAI/Together AI)
+If you want to use OpenAI or Together AI models instead of local vLLM, set the following environment variables:
 ```
 export OPENAI_API_KEY="your open ai key"
 export TOGETHER_API_KEY="your together ai key"
@@ -32,7 +42,16 @@ OPENAI_API_KEY="your open ai key"
 TOGETHER_API_KEY="your together ai key"
 ```
 
-These are the commands to reproduce the experiments from the paper:
+Then override the engine configuration in your command. For example, to use GPT-4o with the baseline method:
+```
+python main.py \
+    +data=aime \
+    +method=baselines \
+    method.engine._target_=method.baseline.engine.OpenAIEngine \
+    method.engine.model_name=gpt-4o
+```
+
+These are the commands to reproduce the experiments (using the default vLLM/Qwen3-4B):
 
 AIME:
 ```
@@ -41,23 +60,20 @@ python main.py \
     +data=aime \
     +method=baselines \
     method.perturber_select=paraphrasing \
-    method.aggregator_select=FrequencyUQ \
-    method.engine.model_name=gpt-4o
+    method.aggregator_select=FrequencyUQ
 
 # System-Message
 python main.py \
     +data=aime \
     +method=baselines \
     method.perturber_select=sys_msg \
-    method.aggregator_select=FrequencyUQ \
-    method.engine.model_name=gpt-4o
+    method.aggregator_select=FrequencyUQ
 
 # Chain-of-Thought
 python main.py \
     +data=aime \
     +method=bop \
     method/mcmc=langevin \
-    method.model.engine=gpt-4o \
     method.steps=0 \
     method.burn_in=0 \
     method.num_repeats=10
@@ -67,7 +83,6 @@ python main.py \
     +data=aime \
     +method=bop \
     method/mcmc=langevin \
-    method.model.engine=gpt-4o \
     method.steps=60 \
     method.burn_in=60 \
     method.num_repeats=10
@@ -77,7 +92,6 @@ python main.py \
     +data=aime \
     +method=bop \
     method.mcmc.likelihood_beta=10 \
-    method.model.engine=gpt-4o \
     method.steps=60 \
     method.burn_in=6 \
     method.thinning=6 \
@@ -91,23 +105,20 @@ python main.py \
     +data=simpleqa \
     +method=baselines \
     method.perturber_select=paraphrasing \
-    method.aggregator_select=SemanticFrequencyUQ \
-    method.engine.model_name=gpt-4o
+    method.aggregator_select=SemanticFrequencyUQ
 
 # System-Message
 python main.py \
     +data=simpleqa \
     +method=baselines \
     method.perturber_select=sys_msg \
-    method.aggregator_select=SemanticFrequencyUQ \
-    method.engine.model_name=gpt-4o
+    method.aggregator_select=SemanticFrequencyUQ
 
 # Chain-of-Thought
 python main.py \
     +data=simpleqa \
     +method=bop \
     method/mcmc=langevin \
-    method.model.engine=gpt-4o \
     method.steps=0 \
     method.burn_in=0 \
     method.num_repeats=10
@@ -117,7 +128,6 @@ python main.py \
     +data=simpleqa \
     +method=bop \
     method/mcmc=langevin \
-    method.model.engine=gpt-4o \
     method.steps=60 \
     method.burn_in=60 \
     method.num_repeats=10
@@ -127,7 +137,6 @@ python main.py \
     +data=simpleqa \
     +method=bop \
     method.mcmc.likelihood_beta=100 \
-    method.model.engine=gpt-4o \
     method.steps=60 \
     method.burn_in=6 \
     method.thinning=6 \

@@ -6,5 +6,5 @@ likelihood_param_addendum: ${data.likelihood_param_addendum}
 likelihood_beta: 100
 prior_meta_prompts: ${data.prior_meta_prompts}
 engine:
-  _target_: method.tgext.together.ChatTogetherLogProb
-  model_string: nvidia/Llama-3.1-Nemotron-70B-Instruct-HF
+  _target_: method.tgext.vllm_engine.get_vllm_engine
+  model_string: ${method.vllm_model}
